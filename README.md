@@ -8,6 +8,26 @@ information about HTTP request headers and bodies back to the client.
 
 **This is fork of `jmalloc/echo-server` repository. I just added basic gRPC support.**
 
+## gRPC Support
+
+The server listens for gRPC requests on the port defined by the `GRPC_PORT` environment variable, which defaults to `9090`.
+
+The server implements the gRPC Echo service, which simply echoes back any messages sent to it.
+
+### Running under Docker
+
+```
+docker run -p 8080:8080 -p 9090:9090 stojs/echo-server:dev
+```
+
+### Testing gRPC Echo
+
+To test the gRPC echo functionality, run the application, go to `cmd/echo-server/grpc/` and use the following `grpcurl` command:
+
+```bash
+grpcurl -plaintext -import-path . -proto echo.proto -d '{"message":"hello"}' localhost:9090 echo.Echo/Echo
+```
+
 ## Behavior
 
 - Any messages sent from a websocket client are echoed as a websocket message.

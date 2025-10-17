@@ -1,4 +1,4 @@
-DOCKER_REPO = jmalloc/echo-server
+DOCKER_REPO = stojs/echo-server
 DOCKER_PLATFORMS += linux/amd64
 DOCKER_PLATFORMS += linux/arm64
 
