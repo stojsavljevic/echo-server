@@ -19,6 +19,10 @@ import (
 	"github.com/gorilla/websocket"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+	"net"
+	"context"
+	"google.golang.org/grpc"
+	echo "http-echo/cmd/echo-server/grpc/generated"
 )
 
 func main() {
@@ -27,7 +31,26 @@ func main() {
 		port = "8080"
 	}
 
-	fmt.Printf("Echo server listening on port %s.\n", port)
+	grpcPort := os.Getenv("GRPC_PORT")
+	if grpcPort == "" {
+		grpcPort = "9090"
+	}
+
+	fmt.Printf("Echo HTTP server listening on port %s.\n", port)
+	fmt.Printf("Echo gRPC server listening on port %s.\n", grpcPort)
+
+	// Start gRPC server in goroutine
+	go func() {
+		lis, err := net.Listen("tcp", ":"+grpcPort)
+		if err != nil {
+			panic(fmt.Sprintf("failed to listen: %v", err))
+		}
+		s := grpc.NewServer()
+		echo.RegisterEchoServer(s, &grpcEchoServer{})
+		if err := s.Serve(lis); err != nil {
+			panic(fmt.Sprintf("failed to serve gRPC: %v", err))
+		}
+	}()
 
 	err := http.ListenAndServe(
 		":"+port,
@@ -39,6 +62,15 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+}
+// grpcEchoServer implements echo.EchoServer
+type grpcEchoServer struct {
+	echo.UnimplementedEchoServer
+}
+
+func (s *grpcEchoServer) Echo(ctx context.Context, req *echo.EchoRequest) (*echo.EchoResponse, error) {
+	fmt.Printf("gRPC Echo called: %s\n", req.GetMessage())
+	return &echo.EchoResponse{Message: req.GetMessage()}, nil
 }
 
 var upgrader = websocket.Upgrader{
