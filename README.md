@@ -6,6 +6,8 @@ events (SSE).
 The server is designed for testing HTTP proxies and clients. It echoes
 information about HTTP request headers and bodies back to the client.
 
+**This is fork of `jmalloc/echo-server` repository. I just added basic gRPC support.**
+
 ## Behavior
 
 - Any messages sent from a websocket client are echoed as a websocket message.
