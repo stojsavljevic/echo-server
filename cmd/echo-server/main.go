@@ -4,7 +4,7 @@ package main
 import (
 	"bytes"
 	"embed"
-	"encoding/hex"
+	// "encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -98,9 +98,7 @@ func handler(wr http.ResponseWriter, req *http.Request) {
 		buf.ReadFrom(req.Body) // nolint:errcheck
 
 		if buf.Len() != 0 {
-			w := hex.Dumper(os.Stdout)
-			w.Write(buf.Bytes()) // nolint:errcheck
-			w.Close()
+			fmt.Printf("Body:\n%s\n", buf.String())
 		}
 
 		// Replace original body with buffered version so it's still sent to the
