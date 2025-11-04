@@ -1,65 +1,183 @@
-# Echo Server
+# Echo Server & OpenAPI PetStore Integration
 
-A very simple HTTP echo server with support for websockets and server-sent
-events (SSE).
+A simple HTTP and gRPC echo server with WebSocket, Server-Sent Events (SSE), and an OpenAPI 3.0 PetStore API.
 
-The server is designed for testing HTTP proxies and clients. It echoes
-information about HTTP request headers and bodies back to the client.
+**Note:** This project is a fork of the [jmalloc/echo-server](https://github.com/jmalloc/echo-server) repository. It adds gRPC support and an OpenAPI 3.0-compliant PetStore API.
 
-**This is fork of `jmalloc/echo-server` repository. I just added basic gRPC support.**
+---
 
-## gRPC Support
+## Features
 
-The server listens for gRPC requests on the port defined by the `GRPC_PORT` environment variable, which defaults to `9090`.
+- HTTP echo (returns request details)  
+- gRPC echo service  
+- WebSocket echo  
+- Server-Sent Events (SSE)  
+- OpenAPI 3.0 PetStore API  
+- Health check endpoint  
 
-The server implements the gRPC Echo service, which simply echoes back any messages sent to it.
+---
 
-### Running under Docker
+## Echo Server
 
-```
-docker run -p 8080:8080 -p 9090:9090 stojs/echo-server:dev
-```
+A simple HTTP and gRPC echo server for testing HTTP proxies and clients. It echoes information about HTTP request headers and bodies. It also supports WebSocket and SSE.
 
-### Testing gRPC Echo
+### Behavior
 
-To test the gRPC echo functionality, run the application, go to `cmd/echo-server/grpc/` and use the following `grpcurl` command:
+- Messages sent from a WebSocket client are echoed back as WebSocket messages.  
+- Requests to `*.ws` under any path serve a simple UI for WebSocket testing.  
+- Requests to `*.sse` under any path stream server-sent events.  
+- All other URLs return an HTTP echo response in plain text.
+
+---
+
+### Example HTTP Echo
 
 ```bash
-grpcurl -plaintext -import-path . -proto echo.proto -d '{"message":"hello"}' localhost:9090 echo.Echo/Echo
+curl -X POST http://localhost:8080 \
+  -H "Content-Type: application/json" \
+  -d '{"message": "hello world"}'
 ```
 
-## Behavior
+---
 
-- Any messages sent from a websocket client are echoed as a websocket message.
-- Requests to a file named `.ws` under any path serve a basic UI to connect and send websocket messages.
-- Requests to a file named `.sse` under any path streams server-sent events.
-- Request any other URL to receive the echo response in plain text.
+### Example gRPC Echo
+
+```bash
+grpcurl -plaintext -import-path . -proto echo.proto \
+  -d '{"message":"hello world"}' localhost:9090 echo.Echo/Echo
+```
+
+---
+
+### Example WebSocket Echo
+
+```bash
+wscat -c ws://localhost:8080/ws
+# Then type a message and press enter to see it echoed back
+```
+
+---
+
+### Example SSE
+
+Requests to any path ending with `.sse` will stream server-sent events to the client.
+
+```bash
+curl http://localhost:8080/test.sse
+```
+
+---
+
+## 🐾 OpenAPI PetStore API
+
+Implements a simple PetStore API based on OpenAPI 3.0.  
+The spec is located at `cmd/echo-server/openapi/petstore.yaml`.
+
+### Endpoints (base path `/v1`)
+
+| Method | Path               | Description                     | Example |
+|--------|--------------------|----------------------------------|----------|
+| GET    | `/v1/pets`         | List all pets (`limit` optional, max 100) | `curl http://localhost:8080/v1/pets?limit=10` |
+| POST   | `/v1/pets`         | Create a new pet (`name`, `tag`) | `curl -X POST http://localhost:8080/v1/pets -H 'Content-Type: application/json' -d '{"name":"Rex","tag":"dog"}'` |
+| GET    | `/v1/pets/{petId}` | Retrieve a specific pet          | `curl http://localhost:8080/v1/pets/1` |
+
+---
+
+### Data Models
+
+#### Pet
+
+```json
+{
+  "id": 1,
+  "name": "Fluffy",
+  "tag": "cat"
+}
+```
+
+#### Error
+
+```json
+{
+  "code": 404,
+  "message": "Pet not found"
+}
+```
+
+---
+
+### Implementation Details
+
+- Thread-safe (mutex locks)  
+- Preloaded with 2 sample pets  
+- Validation for required fields  
+- In-memory only (data lost on restart)
+
+---
+
+## Health Check
+
+```bash
+curl http://localhost:8080/health
+```
+
+---
 
 ## Configuration
 
-### Port
+### Overview
 
-The `PORT` environment variable sets the server port, which defaults to `8080`.
+| Variable | Description |
+|-----------|-------------|
+| `PORT`, `GRPC_PORT` | Set server ports (default 8080 / 9090) |
+| `LOG_HTTP_HEADERS`, `LOG_HTTP_BODY` | Enable HTTP request logging |
+| `SEND_SERVER_HOSTNAME` | Include hostname in echo response |
+| `SEND_HEADER_*` | Add custom response headers |
+| `WEBSOCKET_ROOT` | Prefix for WebSocket UI requests |
+
+---
+
+### Port Configuration
+
+- `PORT` sets the HTTP server port (default: **8080**)  
+- `GRPC_PORT` sets the gRPC server port (default: **9090**)
+
+---
 
 ### Logging
 
-Set the `LOG_HTTP_HEADERS` environment variable to print request headers to
-`STDOUT`. Additionally, set the `LOG_HTTP_BODY` environment variable to print
-entire request bodies.
+Set environment variables to enable request logging:
+
+```bash
+LOG_HTTP_HEADERS=true
+LOG_HTTP_BODY=true
+```
+
+---
 
 ### Server Hostname
 
-Set the `SEND_SERVER_HOSTNAME` environment variable to `false` to prevent the
-server from responding with its hostname before echoing the request. The client
-may send the `X-Send-Server-Hostname` request header to `true` or `false` to
-override this server-wide setting on a per-request basis.
+By default, the server includes its hostname in responses.  
+To disable this behavior:
 
-### Arbitrary Headers
+```bash
+SEND_SERVER_HOSTNAME=false
+```
 
-Set the `SEND_HEADER_<header-name>` variable to send arbitrary additional
-headers in the response. Underscores in the variable name are converted to
-hyphens in the header. For example, the following environment variables can be
-used to disable CORS:
+The client can also override this per request using the header:
+
+```
+X-Send-Server-Hostname: false
+```
+
+---
+
+### Custom Response Headers
+
+Add arbitrary headers using environment variables prefixed with `SEND_HEADER_`.  
+Underscores become hyphens.
+
+Example (to disable CORS restrictions):
 
 ```bash
 SEND_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN="*"
@@ -67,39 +185,54 @@ SEND_HEADER_ACCESS_CONTROL_ALLOW_METHODS="*"
 SEND_HEADER_ACCESS_CONTROL_ALLOW_HEADERS="*"
 ```
 
-### WebSocket URL
+---
 
-Set the `WEBSOCKET_ROOT` environment variable to prefix all websocket
-requests made by the `.ws` user interface with a specific path.
+### WebSocket Root Path
 
-## Running the server
+Set `WEBSOCKET_ROOT` to prefix all WebSocket requests made from the `.ws` UI.
 
-The examples below show a few different ways of running the server with the HTTP
-server bound to a custom TCP port of `10000`.
+Example:
 
-### Running locally
-
-```
-go get -u github.com/jmalloc/echo-server/...
-PORT=10000 echo-server
+```bash
+WEBSOCKET_ROOT=/custom
 ```
 
-### Running under Docker
-
-To run the latest version as a container:
-
+Then visit:  
 ```
-docker run --detach -p 10000:8080 jmalloc/echo-server
+http://localhost:8080/custom.ws
 ```
 
-Or, as a swarm service:
+---
 
-```
-docker service create --publish 10000:8080 jmalloc/echo-server
-```
+## Building & Running
 
-The docker container can be built locally with:
+### Using Makefile
 
-```
+```bash
+# Build binary
+make build
+
+# Build Docker image
 make docker
 ```
+
+---
+
+### Running Locally
+
+```bash
+# Run the built binary
+PORT=8081 ./artifacts/build/release/linux/amd64/echo-server
+
+# Or run directly with Go
+PORT=8081 go run ./cmd/echo-server
+```
+
+---
+
+### Run with Docker
+
+```bash
+docker run -p 8081:8080 -p 9091:9090 stojs/echo-server:dev
+```
+

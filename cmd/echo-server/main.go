@@ -4,6 +4,7 @@ package main
 import (
 	"bytes"
 	"embed"
+
 	// "encoding/hex"
 	"fmt"
 	"io"
@@ -16,13 +17,16 @@ import (
 	"text/template"
 	"time"
 
+	"context"
+	echo "http-echo/cmd/echo-server/grpc/generated"
+	"http-echo/cmd/echo-server/openapi"
+	"net"
+
+	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
-	"net"
-	"context"
 	"google.golang.org/grpc"
-	echo "http-echo/cmd/echo-server/grpc/generated"
 )
 
 func main() {
@@ -52,10 +56,28 @@ func main() {
 		}
 	}()
 
+	// Create router for OpenAPI endpoints
+	r := mux.NewRouter()
+
+	// Create pet store and register OpenAPI routes
+	store := openapi.NewPetStore()
+	api := r.PathPrefix("/v1").Subrouter()
+	api.HandleFunc("/pets", store.ListPets).Methods("GET")
+	api.HandleFunc("/pets", store.CreatePets).Methods("POST")
+	// api.HandleFunc("/pets", store.HandleOptions).Methods("OPTIONS")
+	api.HandleFunc("/pets/{petId}", store.ShowPetById).Methods("GET")
+	// api.HandleFunc("/pets/{petId}", store.HandleOptions).Methods("OPTIONS")
+
+	// Add health check endpoint
+	r.HandleFunc("/health", healthCheck).Methods("GET")
+
+	// Default handler for echo server functionality
+	r.PathPrefix("/").HandlerFunc(handler)
+
 	err := http.ListenAndServe(
 		":"+port,
 		h2c.NewHandler(
-			http.HandlerFunc(handler),
+			r,
 			&http2.Server{},
 		),
 	)
@@ -63,6 +85,7 @@ func main() {
 		panic(err)
 	}
 }
+
 // grpcEchoServer implements echo.EchoServer
 type grpcEchoServer struct {
 	echo.UnimplementedEchoServer
@@ -71,6 +94,14 @@ type grpcEchoServer struct {
 func (s *grpcEchoServer) Echo(ctx context.Context, req *echo.EchoRequest) (*echo.EchoResponse, error) {
 	fmt.Printf("gRPC Echo called: %s\n", req.GetMessage())
 	return &echo.EchoResponse{Message: req.GetMessage()}, nil
+}
+
+// healthCheck provides a simple health check endpoint
+func healthCheck(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"status":"healthy","timestamp":"%s"}`, time.Now().Format(time.RFC3339))
 }
 
 var upgrader = websocket.Upgrader{
