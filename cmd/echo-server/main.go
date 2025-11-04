@@ -298,7 +298,7 @@ func serveSSE(wr http.ResponseWriter, req *http.Request, sendServerHostname bool
 				wr,
 				req,
 				&id,
-				"server",
+				"serXver",
 				host,
 			)
 		}
