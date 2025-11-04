@@ -369,6 +369,10 @@ func TestServerSentEvents(t *testing.T) {
 		t.Error("timeout waiting for SSE events")
 	}
 
+	if !eventsFound["server"] {
+		t.Error("expected to receive 'server' event")
+	}
+
 	if !eventsFound["request"] {
 		t.Error("expected to receive 'request' event")
 	}
