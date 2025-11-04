@@ -1,6 +1,7 @@
 FROM scratch
 ARG TARGETPLATFORM
 COPY artifacts/build/release/$TARGETPLATFORM/echo-server /bin/echo-server
+COPY cmd/echo-server/grpc/echo.proto /bin/echo.proto
 ENV PORT=8080
 ENV GRPC_PORT=9090
 ENV LOG_HTTP_HEADERS=true

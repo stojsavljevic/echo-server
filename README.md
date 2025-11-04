@@ -42,6 +42,14 @@ curl -X POST http://localhost:8080 \
 
 ### Example gRPC Echo
 
+If running in Docker, copy the file from the container to the host first like this:
+
+```bash
+docker cp echo-server:/bin/echo.proto ./echo.proto
+```
+
+Then run the following command. Adjust the path to `echo.proto` as needed: 
+
 ```bash
 grpcurl -plaintext -import-path . -proto cmd/echo-server/grpc/echo.proto \
   -d '{"message":"hello world"}' localhost:9090 echo.Echo/Echo
@@ -236,6 +244,6 @@ PORT=8081 go run ./cmd/echo-server
 ### Run with Docker
 
 ```bash
-docker run -p 8081:8080 -p 9091:9090 stojs/echo-server:dev
+docker run --name echo-server -p 8080:8080 -p 9090:9090 stojs/echo-server:dev
 ```
 
