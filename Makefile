@@ -13,3 +13,7 @@ run: $(GO_DEBUG_DIR)/echo-server
 
 .makefiles/%:
 	@curl -sfL https://makefiles.dev/v1 | bash /dev/stdin "$@"
+
+# Override test target to show verbose logs
+override test::
+	go test -v ./...

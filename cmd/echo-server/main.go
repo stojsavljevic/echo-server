@@ -29,34 +29,8 @@ import (
 	"google.golang.org/grpc"
 )
 
-func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	grpcPort := os.Getenv("GRPC_PORT")
-	if grpcPort == "" {
-		grpcPort = "9090"
-	}
-
-	fmt.Printf("Echo HTTP server listening on port %s.\n", port)
-	fmt.Printf("Echo gRPC server listening on port %s.\n", grpcPort)
-
-	// Start gRPC server in goroutine
-	go func() {
-		lis, err := net.Listen("tcp", ":"+grpcPort)
-		if err != nil {
-			panic(fmt.Sprintf("failed to listen: %v", err))
-		}
-		s := grpc.NewServer()
-		echo.RegisterEchoServer(s, &grpcEchoServer{})
-		if err := s.Serve(lis); err != nil {
-			panic(fmt.Sprintf("failed to serve gRPC: %v", err))
-		}
-	}()
-
-	// Create router for OpenAPI endpoints
+// createRouter creates and configures the HTTP router with all routes
+func createRouter() http.Handler {
 	r := mux.NewRouter()
 
 	// Create pet store and register OpenAPI routes
@@ -74,13 +48,49 @@ func main() {
 	// Default handler for echo server functionality
 	r.PathPrefix("/").HandlerFunc(handler)
 
-	err := http.ListenAndServe(
-		":"+port,
-		h2c.NewHandler(
-			r,
-			&http2.Server{},
-		),
+	return h2c.NewHandler(
+		r,
+		&http2.Server{},
 	)
+}
+
+// startGRPCServer starts the gRPC server on the specified port
+func startGRPCServer(grpcPort string) error {
+	lis, err := net.Listen("tcp", ":"+grpcPort)
+	if err != nil {
+		return fmt.Errorf("failed to listen: %v", err)
+	}
+	s := grpc.NewServer()
+	echo.RegisterEchoServer(s, &grpcEchoServer{})
+	if err := s.Serve(lis); err != nil {
+		return fmt.Errorf("failed to serve gRPC: %v", err)
+	}
+	return nil
+}
+
+func main() {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	grpcPort := os.Getenv("GRPC_PORT")
+	if grpcPort == "" {
+		grpcPort = "9090"
+	}
+
+	fmt.Printf("Echo HTTP server listening on port %s.\n", port)
+	fmt.Printf("Echo gRPC server listening on port %s.\n", grpcPort)
+
+	// Start gRPC server in goroutine
+	go func() {
+		if err := startGRPCServer(grpcPort); err != nil {
+			panic(err)
+		}
+	}()
+
+	// Start HTTP server
+	err := http.ListenAndServe(":"+port, createRouter())
 	if err != nil {
 		panic(err)
 	}

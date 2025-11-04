@@ -43,7 +43,7 @@ curl -X POST http://localhost:8080 \
 ### Example gRPC Echo
 
 ```bash
-grpcurl -plaintext -import-path . -proto echo.proto \
+grpcurl -plaintext -import-path . -proto cmd/echo-server/grpc/echo.proto \
   -d '{"message":"hello world"}' localhost:9090 echo.Echo/Echo
 ```
 
@@ -52,7 +52,7 @@ grpcurl -plaintext -import-path . -proto echo.proto \
 ### Example WebSocket Echo
 
 ```bash
-wscat -c ws://localhost:8080/ws
+wscat -c ws://localhost:8080/.ws
 # Then type a message and press enter to see it echoed back
 ```
 
@@ -63,7 +63,7 @@ wscat -c ws://localhost:8080/ws
 Requests to any path ending with `.sse` will stream server-sent events to the client.
 
 ```bash
-curl http://localhost:8080/test.sse
+curl http://localhost:8080/.sse
 ```
 
 ---
@@ -209,6 +209,9 @@ http://localhost:8080/custom.ws
 ### Using Makefile
 
 ```bash
+# Run tests
+make test
+
 # Build binary
 make build
 
