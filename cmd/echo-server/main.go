@@ -27,6 +27,7 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 // createRouter creates and configures the HTTP router with all routes
@@ -62,6 +63,7 @@ func startGRPCServer(grpcPort string) error {
 	}
 	s := grpc.NewServer()
 	echo.RegisterEchoServer(s, &grpcEchoServer{})
+	reflection.Register(s)
 	if err := s.Serve(lis); err != nil {
 		return fmt.Errorf("failed to serve gRPC: %v", err)
 	}

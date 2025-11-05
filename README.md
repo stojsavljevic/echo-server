@@ -42,17 +42,8 @@ curl -X POST http://localhost:8080 \
 
 ### Example gRPC Echo
 
-If running in Docker, copy the file from the container to the host first like this:
-
 ```bash
-docker cp echo-server:/bin/echo.proto ./echo.proto
-```
-
-Then run the following command. Adjust the path to `echo.proto` as needed: 
-
-```bash
-grpcurl -plaintext -import-path . -proto cmd/echo-server/grpc/echo.proto \
-  -d '{"message":"hello world"}' localhost:9090 echo.Echo/Echo
+grpcurl -plaintext -d '{"message": "hello"}' localhost:9090 echo.Echo/Echo
 ```
 
 ---
@@ -86,7 +77,7 @@ The spec is located at `cmd/echo-server/openapi/petstore.yaml`.
 | Method | Path               | Description                     | Example |
 |--------|--------------------|----------------------------------|----------|
 | GET    | `/v1/pets`         | List all pets (`limit` optional, max 100) | `curl http://localhost:8080/v1/pets?limit=10` |
-| POST   | `/v1/pets`         | Create a new pet (`name`, `tag`) | `curl -X POST http://localhost:8080/v1/pets -H 'Content-Type: application/json' -d '{"name":"Rex","tag":"dog"}'` |
+| POST   | `/v1/pets`         | Create a new pet (`name`, `tag`) | `curl -X POST http://localhost:8080/v1/pets -H 'Content-Type: application/json' -d '{"name":"Joe","tag":"parrot"}'` |
 | GET    | `/v1/pets/{petId}` | Retrieve a specific pet          | `curl http://localhost:8080/v1/pets/1` |
 
 ---
