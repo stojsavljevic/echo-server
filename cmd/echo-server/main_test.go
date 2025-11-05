@@ -11,6 +11,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -38,6 +39,11 @@ var (
 	grpcAddress string
 )
 
+func TestMain(m *testing.M) {
+	setupTestServers()
+	os.Exit(m.Run())
+}
+
 // setupTestServers starts the HTTP and gRPC servers for integration testing
 func setupTestServers() {
 	serverOnce.Do(func() {
@@ -64,39 +70,7 @@ func setupTestServers() {
 		}()
 
 		// Wait for servers to be ready
-		time.Sleep(500 * time.Millisecond)
-
-		// Verify HTTP server is ready
-		for i := 0; i < 30; i++ {
-			resp, err := http.Get(httpBaseURL + "/health")
-			if err == nil && resp.StatusCode == http.StatusOK {
-				resp.Body.Close()
-				break
-			}
-			if resp != nil {
-				resp.Body.Close()
-			}
-			time.Sleep(100 * time.Millisecond)
-		}
-
-		// // Verify gRPC server is ready
-		// ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		// defer cancel()
-
-		// for i := 0; i < 30; i++ {
-		// 	conn, err := grpc.NewClient(grpcAddress,
-		// 		grpc.WithTransportCredentials(insecure.NewCredentials()))
-		// 	if err == nil {
-		// 		// Try to actually use the connection
-		// 		client := echo.NewEchoClient(conn)
-		// 		_, err := client.Echo(ctx, &echo.EchoRequest{Message: "test"})
-		// 		conn.Close()
-		// 		if err == nil {
-		// 			break
-		// 		}
-		// 	}
-		// 	time.Sleep(100 * time.Millisecond)
-		// }
+		time.Sleep(2000 * time.Millisecond)
 
 		close(serverReady)
 	})
@@ -106,7 +80,6 @@ func setupTestServers() {
 
 // TestHealthCheck verifies the health check endpoint
 func TestHealthCheck(t *testing.T) {
-	setupTestServers()
 
 	resp, err := http.Get(httpBaseURL + "/health")
 	if err != nil {
@@ -140,7 +113,6 @@ func TestHealthCheck(t *testing.T) {
 
 // TestHTTPEcho verifies basic HTTP echo functionality
 func TestHTTPEcho(t *testing.T) {
-	setupTestServers()
 
 	tests := []struct {
 		name       string
@@ -237,7 +209,6 @@ func TestHTTPEcho(t *testing.T) {
 
 // TestWebSocketEcho verifies WebSocket echo functionality
 func TestWebSocketEcho(t *testing.T) {
-	setupTestServers()
 
 	// Connect to WebSocket
 	wsURL := "ws://localhost:" + testHTTPPort + "/ws"
@@ -302,7 +273,6 @@ func TestWebSocketEcho(t *testing.T) {
 
 // TestServerSentEvents verifies SSE functionality
 func TestServerSentEvents(t *testing.T) {
-	setupTestServers()
 
 	// Use path ending with .sse (path.Base must be ".sse")
 	req, err := http.NewRequest("GET", httpBaseURL+"/events/.sse", nil)
@@ -386,10 +356,6 @@ func TestServerSentEvents(t *testing.T) {
 
 // TestGRPCEcho verifies gRPC echo functionality
 func TestGRPCEcho(t *testing.T) {
-	setupTestServers()
-
-	// Wait a bit more for gRPC server to be fully ready
-	time.Sleep(1000 * time.Millisecond)
 
 	conn, err := grpc.Dial(
 		grpcAddress,
@@ -441,7 +407,6 @@ func TestGRPCEcho(t *testing.T) {
 
 // TestPetStoreAPI verifies OpenAPI PetStore endpoints
 func TestPetStoreAPI(t *testing.T) {
-	setupTestServers()
 
 	t.Run("Get existing pet", func(t *testing.T) {
 		resp, err := http.Get(httpBaseURL + "/v1/pets/1")
@@ -658,7 +623,6 @@ func TestPetStoreAPI(t *testing.T) {
 
 // TestHTTP2Support verifies HTTP/2 support via h2c
 func TestHTTP2Support(t *testing.T) {
-	setupTestServers()
 
 	// Create an HTTP/2 client that allows cleartext HTTP/2
 	client := &http.Client{
