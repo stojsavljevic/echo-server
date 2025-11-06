@@ -81,6 +81,8 @@ func main() {
 		grpcPort = "9090"
 	}
 
+	fmt.Printf("Version: 0.0.1\n")
+
 	fmt.Printf("Echo HTTP server listening on port %s.\n", port)
 	fmt.Printf("Echo gRPC server listening on port %s.\n", grpcPort)
 
