@@ -67,6 +67,30 @@ curl http://localhost:8080/.sse
 
 ---
 
+### Example Error Endpoint
+
+The `/throw` endpoint allows you to simulate HTTP error responses by specifying a status code.
+
+**Usage:**
+
+```bash
+curl -i "http://localhost:8080/throw?code=404"
+```
+
+**Response:**
+
+```
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+
+{"error":"This is a forced error with status 404"}
+```
+
+- Pass any valid HTTP status code (100-599) as the `code` query parameter.
+- Invalid or out-of-range codes will return a 400 Bad Request with `{"error":"Invalid status code"}`.
+
+---
+
 ## 🐾 OpenAPI PetStore API
 
 Implements a simple PetStore API based on OpenAPI 3.0.  

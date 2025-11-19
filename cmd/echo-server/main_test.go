@@ -11,6 +11,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"sync"
@@ -666,4 +667,48 @@ func TestHTTP2Support(t *testing.T) {
 	}
 
 	t.Log("TestHTTP2Support passed")
+}
+
+// TestThrowErrorHandler verifies the throwErrorHandler function
+func TestThrowErrorHandler(t *testing.T) {
+	tests := []struct {
+		name       string
+		codeParam  string
+		expectCode int
+		expectBody string
+	}{
+		{"valid 404", "404", 404, `{"error":"This is a forced error with status 404"}`},
+		{"valid 500", "500", 500, `{"error":"This is a forced error with status 500"}`},
+		{"invalid code", "abc", 400, `{"error":"Invalid status code"}`},
+		{"out of range low", "99", 400, `{"error":"Invalid status code"}`},
+		{"out of range high", "600", 400, `{"error":"Invalid status code"}`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/throw?code="+tt.codeParam, nil)
+			rw := httptest.NewRecorder()
+			throwErrorHandler(rw, req)
+
+			resp := rw.Result()
+			if resp.StatusCode != tt.expectCode {
+				t.Errorf("expected status %d, got %d", tt.expectCode, resp.StatusCode)
+			}
+
+			var gotBody map[string]interface{}
+			json.NewDecoder(resp.Body).Decode(&gotBody)
+			resp.Body.Close()
+
+			if tt.expectBody != "" {
+				// Compare JSON string
+				var wantBody map[string]interface{}
+				json.Unmarshal([]byte(tt.expectBody), &wantBody)
+				if gotBody["error"] != wantBody["error"] {
+					t.Errorf("expected body %q, got %q", wantBody["error"], gotBody["error"])
+				}
+			}
+		})
+	}
+
+	t.Log("TestThrowErrorHandler passed")
 }

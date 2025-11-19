@@ -46,6 +46,9 @@ func createRouter() http.Handler {
 	// Add health check endpoint
 	r.HandleFunc("/health", healthCheck).Methods("GET")
 
+	// Add error throwing endpoint
+	r.HandleFunc("/throw", throwErrorHandler).Methods("GET")
+
 	// Default handler for echo server functionality
 	r.PathPrefix("/").HandlerFunc(handler)
 
@@ -395,4 +398,17 @@ func printHeaders(w io.Writer, h http.Header) {
 			fmt.Fprintf(w, "%s: %s\n", key, value)
 		}
 	}
+}
+
+// throwErrorHandler throws an error with the given status code from the query param
+func throwErrorHandler(w http.ResponseWriter, r *http.Request) {
+	codeStr := r.URL.Query().Get("code")
+	code, err := strconv.Atoi(codeStr)
+	if err != nil || code < 100 || code > 599 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"error":"Invalid status code"}`)
+		return
+	}
+	w.WriteHeader(code)
+	fmt.Fprintf(w, `{"error":"This is a forced error with status %d"}`, code)
 }
